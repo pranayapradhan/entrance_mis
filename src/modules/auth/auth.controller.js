@@ -1,11 +1,12 @@
-import cloudinarySvc from "../../services/cloudinary.service.js";
+import authSvc from "./auth.service.js";
 
 class AuthController {
   registerUser = async (req, res, next) => {
     try {
-      const data = req.body;
-      data.image = await cloudinarySvc.fileUpload(req.file.path, '/user/')
+      const data = await authSvc.transformUserCreate(req)
 
+      // Email for Activation
+      await authSvc.sendActivationNotification(data)
       res.json({
         data: data,
         message: "Register Success",
