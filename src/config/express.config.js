@@ -1,4 +1,5 @@
 import express from "express"
+import "./mongodb.config.js";
 import router from "./router.config.js";
 import { deleteFile } from "../utilities/helper.js";
 
