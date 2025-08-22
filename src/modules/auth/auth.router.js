@@ -8,6 +8,7 @@ const authRouter = Router()
 
 authRouter.post('/register',uploader().single('image'), bodyValidator(RegisterDTO), authCtrl.registerUser)
 authRouter.post('/activate/:token', authCtrl.activateUser)
+
 authRouter.post('/login', bodyValidator(LoginDTO), authCtrl.loginUser)
 authRouter.get('/me', authCtrl.loggedInUserProfile)
 authRouter.get('/logout',  authCtrl.logoutUser)

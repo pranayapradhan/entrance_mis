@@ -19,7 +19,7 @@ const RegisterDTO = Joi.object({
         temporaryAddress: Joi.string().max(100).allow(null,'').default(null)
     }).allow(null,"").default(null),
     dob: Joi.date().allow(null,"").optional().default(null),
-    role:Joi.string().regex(/^(student|admin)$/i).default('student'),
+    role:Joi.string().regex(/^(student|admin|examiner)$/i).default('student'),
     gender: Joi.string().regex(/^(male|female|other)$/).optional().default(null),
     image: null,
     qualification: Joi.string().regex(/^(school|high-school|bachelor)$/).optional().default(null),

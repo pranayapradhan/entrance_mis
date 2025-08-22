@@ -40,22 +40,22 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // if(error.name === "MongoServerError"){
-  //   if(+error.code === 11000){
-  //       message= "Validation Failed"
-  //       code= 400
-  //       status= "VALIDATION_FAILED"
-  //       detail = {};
+  if(error.name === "MongoServerError"){
+    if(+error.code === 11000){
+        message= "Validation Failed"
+        code= 400
+        status= "VALIDATION_FAILED"
+        detail = {};
 
-  //       (Object.keys(error.keyValue)).map((key) => {
-  //           detail[key] = `${key} should be unique.`
-  //       })
-  //   }
-  // }
+        (Object.keys(error.keyValue)).map((key) => {
+            detail[key] = `${key} should be unique.`
+        })
+    }
+  }
 
-  // if(error.name === 'MulterError'){
-  //   code = 422
-  // }
+  if(error.name === 'MulterError'){
+    code = 422
+  }
   res.status(code).json({
     error: detail,
     message: message,

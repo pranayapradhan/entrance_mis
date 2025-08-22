@@ -4,6 +4,7 @@ import { Status } from "../../config/constants.js";
 import { randomStringGenerator } from "../../utilities/helper.js";
 import { AppConfig } from "../../config/config.js";
 import emailSvc from "../../services/email.services.js";
+import UserModel from "../user/user.model.js";
 
 class AuthService {
   async transformUserCreate(req) {
@@ -54,6 +55,38 @@ class AuthService {
       await emailSvc.sendMail({
         to: user.email,
         sub: "Welcome to Entrance MCQ System! Activate Your Account 🎉",
+        msg: emailTemplate
+      })
+    } catch (exception) {
+      throw exception
+    }
+  }
+
+  async newUserWelcomeEmail(user) {
+    try {
+      const emailTemplate = `
+        <div style="background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); padding: 32px; border-radius: 16px; color: #fff; font-family: 'Segoe UI', Arial, sans-serif;">
+          <div style="text-align: center;">
+        <img src="https://img.icons8.com/color/96/000000/checked--v2.png" alt="Activated" style="width: 72px; height: 72px; margin-bottom: 16px;">
+        <h1 style="margin-bottom: 8px; font-size: 2.2em; color: #fff;">Welcome, ${user.name}!</h1>
+        <p style="font-size: 1.1em; color: #ffe082;">Your account has been <span style="color: #43cea2; font-weight: bold;">activated</span> and you are now part of the <span style="color: #ff6f61;">Entrance MCQ System</span> community.</p>
+          </div>
+          <div style="margin: 24px 0; background: #fff; color: #333; border-radius: 8px; padding: 24px;">
+        <h2 style="color: #185a9d;">Get Started</h2>
+        <p style="margin-bottom: 16px;">You can now log in and start exploring our MCQ platform. We wish you the best of luck in your entrance preparation journey!</p>
+        <a href="${AppConfig.frontendUrl}/login" style="display: inline-block; padding: 12px 32px; background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%); color: #fff; font-weight: bold; border-radius: 6px; text-decoration: none; font-size: 1.1em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Login Now</a>
+          </div>
+          <div style="margin-top: 24px; text-align: center; font-size: 0.95em;">
+        <p style="color: #ffe082;">Thank you for joining <span style="color: #ff6f61;">Entrance MCQ System</span>.<br>
+        <span style="color: #fff;">If you have any questions, feel free to contact our support team.</span></p>
+        <p style="color: #bdbdbd;">Please do not reply to this email directly.</p>
+        <p style="color: #bdbdbd;">Best Regards,<br><span style="color: #fff;">System Administrator</span></p>
+          </div>
+        </div>
+      `;
+      return emailSvc.sendMail({
+        to: user.email,
+        sub: "Welcome to Entrance MCQ System – Your Account is Activated! 🎉",
         msg: emailTemplate
       })
     } catch (exception) {
