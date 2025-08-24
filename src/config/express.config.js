@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 
 // Error Handling Middleware
 app.use((error, req, res, next) => {
-  // console.log("Error: ",error)
+  console.log("Error: ",error)
   let code = error.code || 500;
   let detail = error.detail || null;
   let message = error.message || "Internal Server Error";

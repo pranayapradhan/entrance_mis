@@ -3,6 +3,8 @@ import { Status } from "../../config/constants.js";
 import userSvc from "../user/user.service.js";
 import authSvc from "./auth.service.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { randomStringGenerator } from "../../utilities/helper.js";
 
 class AuthController {
   registerUser = async (req, res, next) => {
@@ -102,12 +104,25 @@ class AuthController {
         typ: "Refresh"
       }, AppConfig.jwtSecret,{
         expiresIn: "1d"
-      })
+      });
+
+      const maskedAccessToken = randomStringGenerator(150)
+      const maskedRefreshToken = randomStringGenerator(150)
+
+      const authData = {
+        user: userDetail._id,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        maskedAccessToken: maskedAccessToken,
+        maskedRefreshToken: maskedRefreshToken
+      }
+
+      await authSvc.createAuthData(authData)
 
       res.json({
         data: {
-          accessToken,
-          refreshToken
+          accessToken: maskedAccessToken,
+          refreshToken: maskedRefreshToken
         },
         message: "Welcome to "+userDetail.role+" Panel!!!",
         status: "LOGIN_SUCCESS",
@@ -120,20 +135,25 @@ class AuthController {
 
   loggedInUserProfile = async (req, res, next) => {
     res.json({
-      data: null,
-      message: "Logged In User Profile",
-      status: "LOGGED_IN_USER_PROFILE_FETCHED",
+      data: req.loggedInUser,
+      message: "Me Router",
+      status: "SUCCESS",
       options: null
     })
   }
 
   logoutUser = async (req, res, next) => {
-    res.json({
-      data: null,
-      message: "User Logged Out",
-      status: "USER_LOGOUT_SUCCESS",
-      options: null
-    })
+    try {
+      await authSvc.logoutUser(req.headers['authorization'])
+      res.json({
+        data: null,
+        message: "LoggedOut Successfully",
+        status: "LOGGED_OUT",
+        options: null
+      })
+    } catch (exception) {
+      next(exception)
+    }
   }
 
   refreshToken = async (req, res, next) => {

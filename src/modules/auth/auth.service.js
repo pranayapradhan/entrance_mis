@@ -4,10 +4,10 @@ import { Status } from "../../config/constants.js";
 import { randomStringGenerator } from "../../utilities/helper.js";
 import { AppConfig } from "../../config/config.js";
 import emailSvc from "../../services/email.services.js";
-import UserModel from "../user/user.model.js";
+import AuthModel from "./auth.model.js";
 
 class AuthService {
-  async transformUserCreate(req) {
+  transformUserCreate = async(req) => {
     try {
       const data = req.body;
 
@@ -26,7 +26,7 @@ class AuthService {
     }
   }
 
-  async sendActivationNotification (user) {
+  sendActivationNotification = async (user) => {
     try {
       const emailTemplate = `
         <div style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); padding: 32px; border-radius: 16px; color: #fff; font-family: 'Segoe UI', Arial, sans-serif;">
@@ -62,7 +62,7 @@ class AuthService {
     }
   }
 
-  async newUserWelcomeEmail(user) {
+  newUserWelcomeEmail = async(user) =>{
     try {
       const emailTemplate = `
         <div style="background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); padding: 32px; border-radius: 16px; color: #fff; font-family: 'Segoe UI', Arial, sans-serif;">
@@ -89,6 +89,55 @@ class AuthService {
         sub: "Welcome to Entrance MCQ System – Your Account is Activated! 🎉",
         msg: emailTemplate
       })
+    } catch (exception) {
+      throw exception
+    }
+  }
+
+  createAuthData= async(data) => {
+    try {
+      const auth = new AuthModel(data);
+      return await auth.save()
+    } catch (exception) {
+      throw exception
+    }
+  }
+
+  getSingleRowByFilter = async (filter) => {
+    try {
+      const auth =await AuthModel.findOne(filter)
+      return auth;
+    } catch (exception) {
+      throw exception
+    }
+  }
+
+  getAllRowByFilter = async (filter) => {
+    try {
+      const auth =await AuthModel.find(filter)
+      return auth;
+    } catch (exception) {
+      throw exception
+    }
+  }
+
+  logoutUser = async (token) => {
+    try {
+      const accessToken = token.replace("Bearer ","")
+      const authData = await this.getSingleRowByFilter({
+        maskedAccessToken: accessToken
+      })
+
+      if(!authData){
+        throw {
+          code: 401,
+          message: "Token invalid",
+          status: "INVALID_TOKEN"
+        }
+      }
+
+      const authDel = await AuthModel.findOneAndDelete({maskedAccessToken: accessToken});
+      return authDel
     } catch (exception) {
       throw exception
     }
