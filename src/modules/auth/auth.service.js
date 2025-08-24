@@ -5,26 +5,27 @@ import { randomStringGenerator } from "../../utilities/helper.js";
 import { AppConfig } from "../../config/config.js";
 import emailSvc from "../../services/email.services.js";
 import AuthModel from "./auth.model.js";
+import userSvc from "../user/user.service.js";
 
 class AuthService {
-  transformUserCreate = async(req) => {
+  transformUserCreate = async (req) => {
     try {
       const data = req.body;
 
-      if(req.file){
-        data.image = await cloudinarySvc.fileUpload(req.file.path, '/user/')
+      if (req.file) {
+        data.image = await cloudinarySvc.fileUpload(req.file.path, "/user/");
       }
-      data.password = bcrypt.hashSync(data.password, 12)
+      data.password = bcrypt.hashSync(data.password, 12);
       data.status = Status.INACTIVE;
-      data.activationToken = randomStringGenerator(100)
+      data.activationToken = randomStringGenerator(100);
 
-      const {confirmPassword, ...mappedData} = data; // seperating the confirmPassword and sperading the other data into mappedData variable
+      const { confirmPassword, ...mappedData } = data; // seperating the confirmPassword and sperading the other data into mappedData variable
 
       return mappedData;
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
   sendActivationNotification = async (user) => {
     try {
@@ -37,7 +38,7 @@ class AuthService {
           <div style="margin: 24px 0; background: #fff; color: #333; border-radius: 8px; padding: 24px;">
         <h2 style="color: #2575fc;">Activate Your Account</h2>
         <p style="margin-bottom: 16px;">To get started, please activate your account by clicking the button below:</p>
-        <a href="${AppConfig.frontendUrl}/activate/${user.activationToken}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(90deg, #ff6f61 0%, #ffe082 100%); color: #fff; font-weight: bold; border-radius: 6px; text-decoration: none; font-size: 1.1em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Activate Account</a>
+        <a href="${AppConfig.frontendUrl}/activate/${user.activationToken}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #11cb24ff 0%, #37ff8aff 100%); color: #fff; font-weight: bold; border-radius: 6px; text-decoration: none; font-size: 1.1em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Activate Account</a>
         <p style="margin-top: 20px; font-size: 0.95em;">If the button doesn't work, copy and paste this link into your browser:</p>
         <div style="background: #f3f3f3; color: #2575fc; padding: 8px 12px; border-radius: 4px; font-size: 0.95em; word-break: break-all;">
           ${AppConfig.frontendUrl}/activate/${user.activationToken}
@@ -51,18 +52,18 @@ class AuthService {
           </div>
         </div>
       `;
-      
+
       await emailSvc.sendMail({
         to: user.email,
         sub: "Welcome to Entrance MCQ System! Activate Your Account 🎉",
-        msg: emailTemplate
-      })
+        msg: emailTemplate,
+      });
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
-  newUserWelcomeEmail = async(user) =>{
+  newUserWelcomeEmail = async (user) => {
     try {
       const emailTemplate = `
         <div style="background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); padding: 32px; border-radius: 16px; color: #fff; font-family: 'Segoe UI', Arial, sans-serif;">
@@ -87,62 +88,183 @@ class AuthService {
       return emailSvc.sendMail({
         to: user.email,
         sub: "Welcome to Entrance MCQ System – Your Account is Activated! 🎉",
-        msg: emailTemplate
-      })
+        msg: emailTemplate,
+      });
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
-  createAuthData= async(data) => {
+  createAuthData = async (data) => {
     try {
       const auth = new AuthModel(data);
-      return await auth.save()
+      return await auth.save();
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
   getSingleRowByFilter = async (filter) => {
     try {
-      const auth =await AuthModel.findOne(filter)
+      const auth = await AuthModel.findOne(filter);
       return auth;
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
   getAllRowByFilter = async (filter) => {
     try {
-      const auth =await AuthModel.find(filter)
+      const auth = await AuthModel.find(filter);
       return auth;
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
   logoutUser = async (token) => {
     try {
-      const accessToken = token.replace("Bearer ","")
+      const accessToken = token.replace("Bearer ", "");
       const authData = await this.getSingleRowByFilter({
-        maskedAccessToken: accessToken
-      })
+        maskedAccessToken: accessToken,
+      });
 
-      if(!authData){
+      if (!authData) {
         throw {
           code: 401,
           message: "Token invalid",
-          status: "INVALID_TOKEN"
-        }
+          status: "INVALID_TOKEN",
+        };
       }
 
-      const authDel = await AuthModel.findOneAndDelete({maskedAccessToken: accessToken});
-      return authDel
+      const authDel = await AuthModel.findOneAndDelete({
+        maskedAccessToken: accessToken,
+      });
+      return authDel;
     } catch (exception) {
-      throw exception
+      throw exception;
+    }
+  };
+
+  logoutFromAll = async (filter) => {
+    try {
+      const authDel = await AuthModel.deleteMany(filter);
+      return authDel;
+    } catch (exception) {
+      throw exception;
+    }
+  };
+
+  updateSingleRowByFilter = async (filter, data) => {
+    try {
+      const response = await AuthModel.findOneAndUpdate(
+        filter,
+        { $set: data },
+        { new: true }
+      );
+      return response;
+    } catch (exception) {
+      throw exception;
+    }
+  };
+
+  sendPasswordResetRequestEmail = async (userData) => {
+    try {
+      const emailTemplate = `
+        <div style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); padding: 32px; border-radius: 16px; color: #fff; font-family: 'Segoe UI', Arial, sans-serif;">
+          <div style="text-align: center;">
+        <img src="https://img.icons8.com/color/96/000000/password.png" alt="Reset Password" style="width: 72px; height: 72px; margin-bottom: 16px;">
+        <h1 style="margin-bottom: 8px; font-size: 2em; color: #fff;">Reset Your Password</h1>
+        <p style="font-size: 1.1em; color: #ffe082;">We received a request to reset your password for your Entrance MCQ System account.</p>
+          </div>
+          <div style="margin: 24px 0; background: #fff; color: #333; border-radius: 8px; padding: 24px;">
+        <h2 style="color: #2575fc;">Action Required</h2>
+        <p style="margin-bottom: 16px;">To reset your password, please click the button below or copy and paste the link into your browser:</p>
+        <a href="${AppConfig.frontendUrl}/reset-password?token=${userData.forgetPasswordToken}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color: #fff; font-weight: bold; border-radius: 6px; text-decoration: none; font-size: 1.1em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Reset Password</a>
+        <p style="margin-top: 20px; font-size: 0.95em;">If the button doesn't work, copy and paste this link into your browser:</p>
+        <div style="background: #f3f3f3; color: #2575fc; padding: 8px 12px; border-radius: 4px; font-size: 0.95em; word-break: break-all;">
+          ${AppConfig.frontendUrl}/reset-password?token=${userData.forgetPasswordToken}
+        </div>
+        <p style="margin-top: 16px; color: #b83a2fff; font-size: 0.95em;">This link is valid for the next 3 hours only.</p>
+          </div>
+          <div style="margin-top: 24px; text-align: center; font-size: 0.95em;">
+        <p style="color: #ffe082;">If you did not request a password reset, please ignore this email.</p>
+        <p style="color: #bdbdbd;">Best Regards,<br><span style="color: #fff;">System Administrator</span></p>
+          </div>
+        </div>
+      `;
+      return await emailSvc.sendMail({
+        to: userData.email,
+        sub: "Reset Your Password – Action Required",
+        msg: emailTemplate,
+      });
+    } catch (exception) {
+      throw exception;
+    }
+  };
+
+  verifyPasswordResetToken = async (token) => {
+    try {
+      const userDetail = await userSvc.getSingleUserByFilter({
+        forgetPasswordToken: token,
+      });
+
+      if (!userDetail) {
+        throw {
+          code: 422,
+          message: "Token not found, try again resetting your password.",
+          status: "RESET_TOKEN_NOT_FOUND",
+        };
+      }
+      let tokenExpiry = userDetail.expiryTime.getTime(); // in milisecond
+      const nowTime = Date.now();
+
+      if (tokenExpiry < nowTime) {
+        throw {
+          code: 422,
+          message: "Token expired, please try again",
+          status: "RESET_TOKEN_EXPIRED",
+        };
+      }
+      return userDetail;
+
+    } catch (exception) {
+      throw exception;
+    }
+  };
+
+  sendPasswordResetSuccessEmail = async (userDetail) => {
+    try {
+      const emailTemplate = `
+        <div style="background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); padding: 32px; border-radius: 16px; color: #fff; font-family: 'Segoe UI', Arial, sans-serif;">
+          <div style="text-align: center;">
+        <img src="https://img.icons8.com/color/96/000000/checked--v2.png" alt="Success" style="width: 72px; height: 72px; margin-bottom: 16px;">
+        <h1 style="margin-bottom: 8px; font-size: 2.2em; color: #fff;">Password Reset Successful!</h1>
+        <p style="font-size: 1.1em; color: #ffe082;">Hi ${userDetail.name}, your password has been <span style="color: #43cea2; font-weight: bold;">reset successfully</span>.</p>
+          </div>
+          <div style="margin: 24px 0; background: #fff; color: #333; border-radius: 8px; padding: 24px;">
+        <h2 style="color: #185a9d;">Thank You!</h2>
+        <p style="margin-bottom: 16px;">For your security, you have been logged out from all devices. Please log in again to continue using the Entrance MCQ System.</p>
+        <a href="${AppConfig.frontendUrl}/login" style="display: inline-block; padding: 12px 32px; background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%); color: #fff; font-weight: bold; border-radius: 6px; text-decoration: none; font-size: 1.1em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">Login Now</a>
+          </div>
+          <div style="margin-top: 24px; text-align: center; font-size: 0.95em;">
+        <p style="color: #ffe082;">If you did not perform this action, please contact our support team immediately.</p>
+        <p style="color: #bdbdbd;">Please do not reply to this email directly.</p>
+        <p style="color: #bdbdbd;">Best Regards,<br><span style="color: #fff;">System Administrator</span></p>
+          </div>
+        </div>
+      `;
+      return await emailSvc.sendMail({
+        to: userDetail.email,
+        sub: "✅ Your Password Has Been Reset Successfully",
+        msg: emailTemplate
+      })
+        
+    } catch (exception) {
+        throw exception
     }
   }
 }
 
-const authSvc = new AuthService()
-export default authSvc
+const authSvc = new AuthService();
+export default authSvc;

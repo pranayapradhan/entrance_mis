@@ -157,48 +157,219 @@ class AuthController {
   }
 
   refreshToken = async (req, res, next) => {
-    res.json({
-      data: null,
-      message: "User TOken Refreshed",
-      status: "USER_TOKEN_REFRESHED",
-      options: null
-    })
+    try {
+      let token = req.headers['authorization']
+      token = token.replace("Refresh ", "")
+
+      if(!token){
+        throw {
+          code: 401,
+          message: "Token not found",
+          status: "TOKEN_REQUIRED"
+        }
+      }
+
+      const authToken = await authSvc.getSingleRowByFilter({
+        maskedRefreshToken: token
+      });
+
+      if(!authToken){
+        throw {
+          code: 401,
+          message: "Invalid Token",
+          status: "INVALID_TOKEN"
+        }
+      }
+
+      const data = jwt.verify(authToken.refreshToken, AppConfig.jwtSecret)
+      const userDetail = await userSvc.getSingleUserByFilter({
+        _id: data.sub
+      })
+
+      if(!userDetail){
+        throw {
+          code: 422,
+          message: "User not found",
+          status: "USER_NOT_FOUND"
+        }
+      }
+
+      // jwt token
+      const accessToken = jwt.sign({
+        sub: userDetail._id,
+        typ: "Bearer"
+      }, AppConfig.jwtSecret,{
+        expiresIn: "6h"
+      })
+
+      const refreshToken = jwt.sign({
+        sub: userDetail._id,
+        typ: "Refresh"
+      }, AppConfig.jwtSecret,{
+        expiresIn: "1d"
+      });
+
+      const maskedAccessToken = randomStringGenerator(150)
+      const maskedRefreshToken = randomStringGenerator(150)
+
+      const authData = {
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        maskedAccessToken: maskedAccessToken,
+        maskedRefreshToken: maskedRefreshToken
+      }
+
+      await authSvc.updateSingleRowByFilter({
+        _id: authToken._id
+      }, authData)
+
+      res.json({
+        data: {
+          accessToken: authData.maskedAccessToken,
+          refreshToken: authData.maskedRefreshToken
+        },
+        message: "New access token and refresh token",
+        status: "TOKEN_REFRESHED",
+        options: null
+      })
+    } catch (exception) {
+      if (
+        exception.hasOwnProperty("name") &&
+        exception.name === "TokenExpiredError"
+      ) {
+        next({
+          code: 401,
+          message: exception.message,
+          status: "TOKEN_EXPIRED",
+        });
+      } else {
+        next(exception);
+      }
+    }
   }
 
   forgetPasswordRequset = async (req, res, next) => {
-    res.json({
-      data: null,
-      message: "Forget Password Request",
-      status: "FORGET_PASSWORD_REQUEST",
-      options: null
-    })
+    try {
+      const {email} = req.body;
+      const userDetail = await userSvc.getSingleUserByFilter({
+        email: email
+      })
+
+      if(!userDetail){
+        throw {
+          code: 400,
+          detail: {
+            email: "User not registered yet"
+          },
+          message: "User not registered",
+          status: "USER_NOT_FOUND"
+        }
+      }
+
+      //request
+      const forgetData = {
+        forgetPasswordToken: randomStringGenerator(150),
+        expiryTime: new Date(Date.now() + 3*60*60*1000)
+      }
+
+      const updatedUser = await userSvc.updateSingleUserByFilter({
+        _id: userDetail._id,
+      }, forgetData)
+
+      await authSvc.sendPasswordResetRequestEmail(updatedUser)
+      res.json({
+        data: null,
+        message: "An email has been forwarded to the registered email. Please follow the steps from email",
+        status: "RESET_PASSWORD_LINK_SENT",
+        options: null
+      })
+    } catch (exception) {
+      next(exception)  
+    }
   }
 
-  forgetPasswordTokenVerify = async (req, res, next) => {
-    res.json({
-      data: null,
-      message: "Forget password token verified",
-      status: "TOKEN_VERIFIED",
-      options: null
-    })
-  }
+  forgetPasswordTokenVerify =async (req, res, next) => {
+    try {
+      let token = req.params.token
+      const userDetail = await authSvc.verifyPasswordResetToken(token)
 
-  resetPassword = async (req, res, next) => {
-    res.json({
-      data: null,
-      message: "Reset password",
-      status: "PASSWORD_RESET_SUCCESS",
-      options: null
-    })
-  }
+      // token 
+      token = randomStringGenerator(150)
+      await userSvc.updateSingleUserByFilter({
+        _id: userDetail._id,
+      }, {
+        forgetPasswordToken: token
+      })
+
+      res.json({
+        data: token,
+        message: "Token Verified.",
+        status: "SUCCESS",
+        options: null
+      })
+    } catch (exception) {
+      next(exception)
+    }
+  };
+
+  resetPassword =async (req, res, next) => {
+    try {
+      let token = req.headers.authorization
+      token = token.replace("Bearer ", "")
+
+      const userDetail = await authSvc.verifyPasswordResetToken(token)
+      const password = bcrypt.hashSync(req.body.password, 12)      
+      await userSvc.updateSingleUserByFilter({
+        _id: userDetail._id
+      }, {
+        password: password,
+        forgetPasswordToken: null,
+        expiryTime: null
+      })
+      await authSvc.logoutFromAll({
+        user: userDetail._id
+      })
+
+      await authSvc.sendPasswordResetSuccessEmail(userDetail)
+      res.json({
+        data: null,
+        message: "Password reset successfully.",
+        status: "PASSWORD_RESET",
+        options: null
+      })
+    } catch (exception) {
+      next(exception)
+    }
+  };
 
   updateUserById = async (req, res, next) => {
-    res.json({
-      data: null,
-      message: "User Updated Successfully",
-      status: "USER_UPDATE_SUCCESS",
-      options: null
-    })
+    try {
+      const { id } = req.params;
+      const data = req.body;
+      const userDetail = await userSvc.getSingleUserByFilter({
+        _id: id
+      })
+
+      if(!userDetail){
+        throw{
+          code: 401,
+          message: "User not found",
+          status: "USER_NOT_FOUND"
+        }
+      }
+      console.log(data)
+
+      const updatedUser = await userSvc.updateSingleUserById(id, req.body);
+
+      res.json({
+        data: updatedUser,
+        message: "User updated successfully.",
+        status: "USER_UPDATED",
+        options: null
+      });
+    } catch (exception) {
+      next(exception);
+    }
   }
 }
 

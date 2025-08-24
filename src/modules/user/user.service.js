@@ -24,32 +24,61 @@ class UserService {
     };
   }
 
-  async createUser (data) {
+  async createUser(data) {
     try {
       const user = new UserModel(data);
-      return await user.save()
+      return await user.save();
     } catch (exception) {
-      throw exception
+      throw exception;
     }
   }
 
-  getSingleUserByFilter = async(filter) => {
+  getSingleUserByFilter = async (filter) => {
     try {
-      const userData = await UserModel.findOne(filter)
+      const userData = await UserModel.findOne(filter);
       return userData;
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
 
   updateSingleUserByFilter = async (filter, data) => {
     try {
-      const userData = await UserModel.findOneAndUpdate(filter, {$set: data}, {new: true})
+      const userData = await UserModel.findOneAndUpdate(
+        filter,
+        { $set: data },
+        { new: true }
+      );
       return userData;
     } catch (exception) {
-      throw exception
+      throw exception;
     }
-  }
+  };
+
+  updateSingleUserById = async (id, updateData) => {
+    if (!updateData || typeof updateData !== "object") {
+      throw { code: 400, message: "Invalid update data" };
+    }
+
+    // remove restricted fields
+    const restrictedFields = ["email", "password"];
+    restrictedFields.forEach((field) => {
+      if (field in updateData) {
+        delete updateData[field];
+      }
+    });
+
+    const updatedUser = await UserModel.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      throw { code: 404, message: "User not found" };
+    }
+
+    return updatedUser;
+  };
 }
 
 const userSvc = new UserService()
