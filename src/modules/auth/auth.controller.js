@@ -357,7 +357,6 @@ class AuthController {
           status: "USER_NOT_FOUND"
         }
       }
-      console.log(data)
 
       const updatedUser = await userSvc.updateSingleUserById(id, req.body);
 

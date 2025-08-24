@@ -59,7 +59,6 @@ class UserService {
     if (!updateData || typeof updateData !== "object") {
       throw { code: 400, message: "Invalid update data" };
     }
-
     // remove restricted fields
     const restrictedFields = ["email", "password"];
     restrictedFields.forEach((field) => {
