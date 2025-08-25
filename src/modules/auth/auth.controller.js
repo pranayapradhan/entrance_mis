@@ -361,7 +361,7 @@ class AuthController {
       const updatedUser = await userSvc.updateSingleUserById(id, req.body);
 
       res.json({
-        data: updatedUser,
+        data: userSvc.getSingleUserByFilter(updatedUser),
         message: "User updated successfully.",
         status: "USER_UPDATED",
         options: null
